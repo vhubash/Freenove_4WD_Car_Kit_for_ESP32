@@ -19,16 +19,16 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: '3.11'
       
       - name: Install dependencies
         run: |
-          python3 -m pip install --upgrade pip
-          pip3 install PyQt5==5.15.4
-          pip3 install Pillow==9.1.1
-          pip3 install opencv-python==4.5.4.60
-          pip3 install numpy
-          pip3 install pyinstaller
+          python3 -m pip install --upgrade pip setuptools wheel
+          pip3 install PyQt5==5.15.9
+          pip3 install Pillow==10.0.0
+          pip3 install opencv-python==4.8.0.74
+          pip3 install numpy==1.24.3
+          pip3 install pyinstaller==6.1.0
       
       - name: Build executable with PyInstaller
         run: |
@@ -39,15 +39,17 @@ jobs:
             --name "ESP32_TCP_Client" \
             --hidden-import=PyQt5 \
             --hidden-import=cv2 \
+            --osx-bundle-identifier=com.esp32.tcpclient \
             main.py
       
-      - name: Create DMG (optional)
+      - name: Create DMG
         run: |
           cd TCP
           if [ -d "dist/ESP32_TCP_Client.app" ]; then
             hdiutil create -volname "ESP32_TCP_Client" \
               -srcfolder dist/ESP32_TCP_Client.app \
               -ov -format UDZO dist/ESP32_TCP_Client.dmg
+            ls -lh dist/ESP32_TCP_Client.dmg
           fi
       
       - name: Upload artifacts
@@ -69,8 +71,9 @@ jobs:
           body: |
             macOS executable for ESP32 TCP Client
             
-            Built on: macOS Latest
-            Python version: 3.9
+            Built on: macOS Latest (ARM64)
+            Python version: 3.11
+            PyInstaller version: 6.1.0
           draft: false
           prerelease: true
         env:
