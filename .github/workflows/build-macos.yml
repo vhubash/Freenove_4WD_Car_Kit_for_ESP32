@@ -1,0 +1,86 @@
+name: Build macOS Executable
+
+on:
+  push:
+    branches:
+      - macos-build-workflow
+    paths:
+      - 'TCP/**'
+      - '.github/workflows/build-macos.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip3 install PyQt5==5.15.4
+          pip3 install Pillow==9.1.1
+          pip3 install opencv-python==4.5.4.60
+          pip3 install numpy
+          pip3 install pyinstaller
+      
+      - name: Build executable with PyInstaller
+        run: |
+          cd TCP
+          pyinstaller --onefile \
+            --windowed \
+            --icon=image/logo_Mini.png \
+            --add-data "image:image" \
+            --name "ESP32_TCP_Client" \
+            --hidden-import=PyQt5 \
+            --hidden-import=cv2 \
+            main.py
+      
+      - name: Create DMG (optional)
+        run: |
+          cd TCP
+          if [ -d "dist/ESP32_TCP_Client.app" ]; then
+            hdiutil create -volname "ESP32_TCP_Client" \
+              -srcfolder dist/ESP32_TCP_Client.app \
+              -ov -format UDZO dist/ESP32_TCP_Client.dmg
+          fi
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: macOS-executable
+          path: TCP/dist/
+          retention-days: 30
+      
+      - name: Create Release
+        if: success()
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: macos-build-${{ github.run_number }}
+          release_name: macOS Build ${{ github.run_number }}
+          body: |
+            macOS executable for ESP32 TCP Client
+            
+            Built on: ${{ runner.os }}
+            Python version: 3.9
+          draft: false
+          prerelease: true
+      
+      - name: Upload Release Asset
+        if: success()
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: TCP/dist/ESP32_TCP_Client
+          asset_name: ESP32_TCP_Client
+          asset_content_type: application/octet-stream
