@@ -14,7 +14,7 @@ jobs:
     runs-on: macos-latest
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -35,7 +35,6 @@ jobs:
           cd TCP
           pyinstaller --onefile \
             --windowed \
-            --icon=image/logo_Mini.png \
             --add-data "image:image" \
             --name "ESP32_TCP_Client" \
             --hidden-import=PyQt5 \
@@ -52,35 +51,27 @@ jobs:
           fi
       
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: macOS-executable
           path: TCP/dist/
           retention-days: 30
       
-      - name: Create Release
+      - name: Create GitHub Release
         if: success()
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
+          files: |
+            TCP/dist/ESP32_TCP_Client
+            TCP/dist/ESP32_TCP_Client.dmg
           tag_name: macos-build-${{ github.run_number }}
           release_name: macOS Build ${{ github.run_number }}
           body: |
             macOS executable for ESP32 TCP Client
             
-            Built on: ${{ runner.os }}
+            Built on: macOS Latest
             Python version: 3.9
           draft: false
           prerelease: true
-      
-      - name: Upload Release Asset
-        if: success()
-        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: TCP/dist/ESP32_TCP_Client
-          asset_name: ESP32_TCP_Client
-          asset_content_type: application/octet-stream
